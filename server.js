@@ -1,30 +1,44 @@
+require('dotenv').config();
 const express = require('express');
-const app = express();
-const PORT = 3000;
+const cors = require('cors');
+const { GoogleGenAI } = require('@google/genai');
 
-//Middleware: Permite que el servidor entienda datos en formato JSON 
+const app = express();
+
+app.use(cors());
 app.use(express.json());
 
-//Ruta GET: para comprobar que el servidor responde
-app.get('/', (req, res) =>{
-    res.send('English AI Teacher API is running!');
+const PORT = 3000;
+// Usamos el modelo estable y activo de Gemini
+const MODEL_NAME = 'gemini-3.8-flash';
+
+const ai = new GoogleGenAI();
+
+const SYSTEM_INSTRUCTION = "You are a professional, encouraging, and helpful English teacher. Help the user practice English, gently correct grammar mistakes if needed, and keep the conversation engaging.";
+
+// Ruta principal del chat con Gemini
+app.post('/api/chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+        
+        if (!message) {
+            return res.status(400).json({ success: false, error: "Message is required" });
+        }
+
+        console.log(`[AI] Procesando mensaje con ${MODEL_NAME}...`);
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: `${SYSTEM_INSTRUCTION}\n\nUser: ${message}`,
+        });
+
+        res.json({ success: true, reply: response.text });
+
+    } catch (error) {
+        console.error("DETALLE DEL ERROR DE LA IA:", error);
+        res.status(500).json({ success: false, error: error.message || "Failed to generate response." });
+    }
 });
 
-//NUEVA RUTA POST: Recibe el mensaje del usuario y simula una respuesta
-app.post(`/api/chat`, (req,res) =>{
-    //Capturamos el mensaje que nos envía el usuario
-    const userMessage = req.body.message;
-
-    console.log('Mensaje recibido del usuario: ${userMessage}');
-
-    //Devolvemos una respuesta de prueba (aquí en el futuro conectaremos la IA)
-    res.json({
-        status: 'success',
-        reply: 'Hello! I received your message: "${userMessage}". Let´s practice English!'
-    });
-});
-
-//Arrancar el servidor
 app.listen(PORT, () => {
-    console.log(`Servidor funcionando en http://localhost:${PORT}`);
+    console.log(`Servidor de profesor de inglés activo en http://localhost:3000`);
 });
