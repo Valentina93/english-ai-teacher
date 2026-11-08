@@ -54,67 +54,95 @@
     </footer>
 
     <!-- Lógica JavaScript para conectar con nuestro backend Express -->
-    <script>
-        const chatContainer = document.getElementById('chat-container');
-        const chatForm = document.getElementById('chat-form');
-        const userInput = document.getElementById('user-input');
+<script>
+    const chatContainer = document.getElementById('chat-container');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
 
-        chatForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const text = userInput.value.trim();
-            if (!text) return;
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = userInput.value.trim();
+        if (!text) return;
 
-            // 1. Mostrar mensaje del usuario en pantalla
-            appendMessage(text, 'user');
-            userInput.value = '';
+        // 1. Mostrar mensaje del usuario en pantalla
+        appendMessage(text, 'user');
+        userInput.value = '';
 
-            try {
-                // 2. Enviar petición POST a nuestro servidor Express
-                const response = await fetch('http://localhost:3000/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
-                });
+        // 2. Mostrar indicador de escritura (Typing...)
+        const typingId = 'typing-' + Date.now();
+        showTypingIndicator(typingId);
 
-                const data = await response.json();
+        try {
+            // 3. Enviar petición POST a nuestro servidor Express
+            const response = await fetch('http://localhost:3000/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
 
-                if (data.success) {
-                    appendMessage(data.reply, 'ai');
-                } else {
-                    appendMessage('Sorry, something went wrong on the server.', 'ai');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                appendMessage('Could not connect to the backend server.', 'ai');
-            }
-        });
+            const data = await response.json();
 
-        function appendMessage(text, sender) {
-            const messageDiv = document.createElement('div');
-            if (sender === 'user') {
-                messageDiv.className = 'flex items-end justify-end space-x-2';
-                messageDiv.innerHTML = `
-                    <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-none shadow-sm max-w-[80%] text-sm leading-relaxed">
-                        ${escapeHTML(text)}
-                    </div>
-                `;
+            // Quitar indicador de escritura
+            removeTypingIndicator(typingId);
+
+            if (data.success) {
+                appendMessage(data.reply, 'ai');
             } else {
-                messageDiv.className = 'flex items-start space-x-2';
-                messageDiv.innerHTML = `
-                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[80%] text-slate-700 text-sm leading-relaxed">
-                        ${escapeHTML(text)}
-                    </div>
-                `;
+                appendMessage('Sorry, something went wrong on the server.', 'ai');
             }
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } catch (error) {
+            console.error('Error:', error);
+            removeTypingIndicator(typingId);
+            appendMessage('Could not connect to the backend server.', 'ai');
         }
+    });
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
+    function appendMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        if (sender === 'user') {
+            messageDiv.className = 'flex items-end justify-end space-x-2';
+            messageDiv.innerHTML = `
+                <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-none shadow-sm max-w-[80%] text-sm leading-relaxed">
+                    ${escapeHTML(text)}
+                </div>
+            `;
+        } else {
+            messageDiv.className = 'flex items-start space-x-2';
+            messageDiv.innerHTML = `
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[80%] text-slate-700 text-sm leading-relaxed">
+                    ${escapeHTML(text)}
+                </div>
+            `;
         }
-    </script>
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function showTypingIndicator(id) {
+        const typingDiv = document.createElement('div');
+        typingDiv.id = id;
+        typingDiv.className = 'flex items-start space-x-2';
+        typingDiv.innerHTML = `
+            <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-[80%] text-slate-500 text-sm flex items-center space-x-1.5">
+                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
+                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-.2s]"></span>
+                <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-.4s]"></span>
+            </div>
+        `;
+        chatContainer.appendChild(typingDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function removeTypingIndicator(id) {
+        const element = document.getElementById(id);
+        if (element) element.remove();
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+</script>
 </body>
 </html>
